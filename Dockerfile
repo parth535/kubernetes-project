@@ -1,8 +1,5 @@
 FROM centos:latest
-RUN /etc/yum.repos.d/
-RUN sed -i 's/mirrorlist/#mirrorlist/g'/etc/yum.repos.d/centos-*
-RUN sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g'/etc/yum.repos.d/centos-*
-RUN sudo yum update -y
+RUN yum update -y
 RUN yum install -y httpd \
 zip \
 unzip \
