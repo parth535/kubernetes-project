@@ -1,0 +1,43 @@
+node{
+    stage("git checkout"){
+        git 'https://github.com/parth535/kubernetes-project.git'
+    }
+    stage("sending docker file jenkins to ansible server by ssh"){
+        sshagent(['b1bce0c0-26be-4777-b458-5216a7488ed8']) {
+          sh 'ssh -o StrictHostKeyChecking=no   ubuntu@172.31.42.169'
+          sh 'scp /var/lib/jenkins/workspace/pipeline-demo/*  ubuntu@172.31.42.169:/home/ubuntu/'
+    }
+        
+        
+    }
+    stage("docker image building on ansible server"){
+        sshagent(['b1bce0c0-26be-4777-b458-5216a7488ed8']) {
+          sh 'ssh -o StrictHostKeyChecking=no   ubuntu@172.31.42.169 cd /home/ubuntu/'
+          sh "ssh -o StrictHostKeyChecking=no   ubuntu@172.31.42.169  docker image build -t $JOB_NAME:v1.$BUILD_ID ."
+    }
+    
+        
+    }
+    stage("pushing docker image to docker hub"){
+        sshagent(['b1bce0c0-26be-4777-b458-5216a7488ed8']){
+            withCredentials([string(credentialsId: 'dockerhub_password', variable: 'dockerhub_password')]) {
+             sh "ssh -o StrictHostKeyChecking=no   ubuntu@172.31.42.169 docker login -u parth3676 -p ${dockerhub_password}"
+             sh "ssh -o StrictHostKeyChecking=no   ubuntu@172.31.42.169 docker tag $JOB_NAME:v1.$BUILD_ID parth3676/$JOB_NAME:v1.$BUILD_ID"
+             sh "ssh -o StrictHostKeyChecking=no   ubuntu@172.31.42.169 docker push parth3676/$JOB_NAME:v1.$BUILD_ID"
+}
+        }
+    }
+    stage("copy files from ansible to kubernetes"){
+        sshagent(['e5e0a7d9-5307-4a22-8e5e-5cd4d7bd3c32']){
+             sh 'ssh -o StrictHostKeyChecking=no  ubuntu@172.31.34.249:/home/ubuntu'
+             sh 'scp /var/lib/jenkins/workspace/pipeline-demo/*  ubuntu@172.31.42.169:/home/ubuntu/'
+            
+        }
+    }
+    stage("deployment on kubernetes by ansible"){
+        sshagent(['b1bce0c0-26be-4777-b458-5216a7488ed8']){
+            sh 'ssh -o StrictHostKeyChecking=no   ubuntu@172.31.42.169 cd /home/ubuntu'
+            sh 'ssh -o StrictHostKeyChecking=no   ubuntu@172.31.42.169 ansible-playbook ansible.yml'
+        }
+    }
+}
